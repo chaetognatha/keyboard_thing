@@ -22,4 +22,11 @@ class Keyboard:
                 self.keyboard.nodes['SW' + str((i-1)*self.cols + j)]['coord'] = (i, j)
         self.end_node = 'SW' + str(self.n)
 
-#define population class
+# define population class
+class Population:
+    def __init__(self, count):
+        # size of population
+        self.count = count
+        # RULES FOR GENERATING INDIVIDUALS
+        # initialize keyboard population
+        self.population = [Keyboard(12, 10) for i in range(self.count)]
