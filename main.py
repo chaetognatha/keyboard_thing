@@ -31,14 +31,20 @@ class Keyboard:
         if (pins / 2) % 1 == 0:
             pincols = pins / 2
             pinrows = pins / 2
-            matrix = pincols * pinrows
         else:
             pincols = int(pins / 2 - 0.5)
             pinrows = int(pins / 2 + 0.5)
+
         #These are the matrix/switches
         self.pinrows = pinrows
         self.pincols = pincols
         self.matrix = pinrows * pincols
+
+        for j in range(1, pinrows + 1):
+            for k in range(1, pincols + 1):
+                #list of all switches and their column and row
+                listc = [k + j - 2, k, j]
+                switch.append(listc)
 
     def keebnodes(self, json_dict):
         # Process json into nodes
@@ -48,15 +54,25 @@ class Keyboard:
         #Assuming json results in an 8x2 layout.
         rows = 2
         cols = 8
-        num = 0
+        node = 0
         for i in range(1, rows + 1):
             #adjy = adjustment for row from jason borne
             adjy = 0
             for j in range(1, cols + 1):
                 # adjx = adjustment for row from json, note that adjx would be half the adjustment, half before and half after so that the node settles in the middle of the button.
                 adjx = 0
-                keeb.nodes['SW' + str(num)]['coord'] = (j+adjx, i+adjy)
-                num += 1
+                keeb.nodes['SW' + str(node)]['coord'] = (j+adjx, i+adjy)
+                node += 1
+
+    def connectswitch(self):
+        #this is for randomizing switch
+        for i in range(0, node):
+            #each switchslot chooses a random switch
+            rand = np.random.randint(0, matrix)
+            #add switch[rand] to switchslot i
+            keeb.nodes['SW' + str(i)]['switch'] = (rand)
+
+        #we also need to be able to swap specific switches.
 
 # define population class
 class Population:
