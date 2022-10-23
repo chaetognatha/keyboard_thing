@@ -12,27 +12,51 @@ Special: use OOP to model the keyboard circuit
 """
 # define keyboard class
 class Keyboard:
-    def __init__(self, rows, cols, json_file):
+    def __init__(self, pins, json_file):
         self.json_file = json_file
         # import json file as dict and generate node locations based on the jason file.
         with open(json_file) as f:
             self.json_dict = json.load(f)
 
 
+        #self.switches = ['SW' + str(i) for i in range(1, self.n+1)]
+        self.keyboard = nx.Graph()
+
+        #This is wrong, the nodes come from the json not the matrix, the amount of nodes will always be <= to the amount of switches.
+        #self.keyboard.add_nodes_from(self.switches)
+
+    def switches(self, pins):
         # Matrix where rows and cols depend on amount of pins. example 18 pins -> sqrt(18) = 9 -> 9 rows and 9 columns. for uneven amount of pins make columns>rows
         # Note that these cols and rows are NOT defining the keeb cols and rows, this is specifically for the matrix and will always be as square as possible
-        self.rows = rows
-        self.cols = cols
-        self.n = rows * cols
-
-        self.switches = ['SW' + str(i) for i in range(1, self.n+1)]
-        self.keyboard = nx.Graph()
-        self.keyboard.add_nodes_from(self.switches)
+        if (pins / 2) % 1 == 0:
+            pincols = pins / 2
+            pinrows = pins / 2
+            matrix = pincols * pinrows
+        else:
+            pincols = int(pins / 2 - 0.5)
+            pinrows = int(pins / 2 + 0.5)
+        #These are the matrix/switches
+        self.pinrows = pinrows
+        self.pincols = pincols
+        self.matrix = pinrows * pincols
 
     def keebnodes(self, json_dict):
         # Process json into nodes
         # These will become the nodes used to measure fitness.
         # Testing out with an 8x2 should be sufficient to test out the algorithm, lowest amount of pins is 8 while the regular setup requires 10, highest should be 16.
+
+        #Assuming json results in an 8x2 layout.
+        rows = 2
+        cols = 8
+        num = 0
+        for i in range(1, rows + 1):
+            #adjy = adjustment for row from jason borne
+            adjy = 0
+            for j in range(1, cols + 1):
+                # adjx = adjustment for row from json, note that adjx would be half the adjustment, half before and half after so that the node settles in the middle of the button.
+                adjx = 0
+                keeb.nodes['SW' + str(num)]['coord'] = (j+adjx, i+adjy)
+                num += 1
 
 # define population class
 class Population:
