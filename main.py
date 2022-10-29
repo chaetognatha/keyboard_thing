@@ -12,22 +12,17 @@ Special: use OOP to model the keyboard circuit
 """
 # define keyboard class
 class Keyboard:
-    def __init__(self, pins, json_file):
+    def __init__(self, pins):
+        '''
         self.json_file = json_file
         # import json file as dict and generate node locations based on the jason file.
         with open(json_file) as f:
             self.json_dict = json.load(f)
+        '''
 
-
-        #self.switches = ['SW' + str(i) for i in range(1, self.n+1)]
-        self.keyboard = nx.Graph()
-
-        #This is wrong, the nodes come from the json not the matrix, the amount of nodes will always be <= to the amount of switches.
-        #self.keyboard.add_nodes_from(self.switches)
-
-    def switches(self, pins):
         # Matrix where rows and cols depend on amount of pins. example 18 pins -> sqrt(18) = 9 -> 9 rows and 9 columns. for uneven amount of pins make columns>rows
         # Note that these cols and rows are NOT defining the keeb cols and rows, this is specifically for the matrix and will always be as square as possible
+        self.pins = pins
         if (pins / 2) % 1 == 0:
             pincols = pins / 2
             pinrows = pins / 2
@@ -40,11 +35,22 @@ class Keyboard:
         self.pincols = pincols
         self.matrix = pinrows * pincols
 
-        for j in range(1, pinrows + 1):
+        self.switches = []
+
+
+
+        #self.switches = ['SW' + str(i) for i in range(1, self.n+1)]
+        self.keyboard = nx.Graph()
+
+        #This is wrong, the nodes come from the json not the matrix, the amount of nodes will always be <= to the amount of switches.
+        #self.keyboard.add_nodes_from(self.switches)
+
+    def switches(self, pinrows, pincols):
+       for j in range(1, pinrows + 1):
             for k in range(1, pincols + 1):
                 #list of all switches and their column and row
                 listc = [k + j - 2, k, j]
-                switch.append(listc)
+                self.switches.append(listc)
 
     def keebnodes(self, json_dict):
         # Process json into nodes
@@ -58,10 +64,14 @@ class Keyboard:
         for i in range(1, rows + 1):
             #adjy = adjustment for row from jason borne
             adjy = 0
+            adjx = 0
+            skip = 0
             for j in range(1, cols + 1):
                 # adjx = adjustment for row from json, note that adjx would be half the adjustment, half before and half after so that the node settles in the middle of the button.
                 adjx = 0
-                keeb.nodes['SW' + str(node)]['coord'] = (j+adjx, i+adjy)
+                skip = 0
+                self.keyboard.nodes['SW' + str(node)]['coord'] = (j + adjx + skip, i + adjy)
+                adjx = 0
                 node += 1
 
     def connectswitch(self):
@@ -107,3 +117,5 @@ class Population:
 
         # initialize keyboard population
         self.population = [Keyboard(12, 10) for i in range(self.count)]
+
+x = Keyboard(18)
