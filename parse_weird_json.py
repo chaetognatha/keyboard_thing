@@ -21,6 +21,7 @@ class WeirdJson:
                         for key in j:
                             if key == 'x':
                                 print("add ", j['x'], " horizontal space")
+
                             elif key == 'y':
                                 print("add ", j['y'], " vertical space")
                             elif key == 'w':

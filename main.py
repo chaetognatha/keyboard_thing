@@ -12,13 +12,51 @@ Special: use OOP to model the keyboard circuit
 """
 # define keyboard class
 class Keyboard:
-    def __init__(self, pins):
-        '''
+    def __init__(self, pins, json_file):
+        self.keyboard = nx.Graph()
         self.json_file = json_file
-        # import json file as dict and generate node locations based on the jason file.
-        with open(json_file) as f:
+        with open(json_file, encoding="utf8") as f:
             self.json_dict = json.load(f)
-        '''
+            #print(type(self.json_dict))
+            #print(len(self.json_dict))
+            node = 0
+            adjy = 0
+            skipy = 0
+            for i in self.json_dict:
+                print("This is a new row!")
+                adjx = 0
+                skipx = 0
+                for j in i:
+                    #print(j)
+                    if isinstance(j, str):
+                        j.rstrip()
+                        print(j.rstrip(), "is a str")
+                        self.keyboard.add_node('SW' + str(node))
+                        self.keyboard.nodes['SW' + str(node)]['coord'] = (adjx + skipx, adjy + skipy)
+                        skipx += adjx
+                        skipx += 1
+                        node += 1
+                    elif isinstance(j, dict):
+                        #print("This a dict with ", len(j), "items")
+                        for key in j:
+                            if key == 'x':
+                                print("add ", j['x'], " horizontal space")
+                                skipx += int(j['x'])
+                            elif key == 'y':
+                                print("add ", j['y'], " vertical space")
+                                skipx += int(j['y'])
+                            elif key == 'w':
+                                print("add key width by ", j['w'])
+                                adjx += int(j['w'])/2
+                            elif key == 'h':
+                                print("add key height(downwards) by ", j['h'])
+                                adjy += int(j['h']) / 2
+                            elif key == 'x2' or key == 'y2' or key == 'w2' or key == 'h2':
+                                print("uh oh")
+                            elif key == 'a' or key == 'f' or key == 'f2' or key == 'p' or key == 's':
+                                print("something about font")
+                adjy += 1
+
 
         # Matrix where rows and cols depend on amount of pins. example 18 pins -> sqrt(18) = 9 -> 9 rows and 9 columns. for uneven amount of pins make columns>rows
         # Note that these cols and rows are NOT defining the keeb cols and rows, this is specifically for the matrix and will always be as square as possible
@@ -40,7 +78,7 @@ class Keyboard:
 
 
         #self.switches = ['SW' + str(i) for i in range(1, self.n+1)]
-        self.keyboard = nx.Graph()
+
 
         #This is wrong, the nodes come from the json not the matrix, the amount of nodes will always be <= to the amount of switches.
         #self.keyboard.add_nodes_from(self.switches)
@@ -52,27 +90,6 @@ class Keyboard:
                 listc = [k + j - 2, k, j]
                 self.switches.append(listc)
 
-    def keebnodes(self, json_dict):
-        # Process json into nodes
-        # These will become the nodes used to measure fitness.
-        # Testing out with an 8x2 should be sufficient to test out the algorithm, lowest amount of pins is 8 while the regular setup requires 10, highest should be 16.
-
-        #Assuming json results in an 8x2 layout.
-        rows = 2
-        cols = 8
-        node = 0
-        for i in range(1, rows + 1):
-            #adjy = adjustment for row from jason borne
-            adjy = 0
-            adjx = 0
-            skip = 0
-            for j in range(1, cols + 1):
-                # adjx = adjustment for row from json, note that adjx would be half the adjustment, half before and half after so that the node settles in the middle of the button.
-                adjx = 0
-                skip = 0
-                self.keyboard.nodes['SW' + str(node)]['coord'] = (j + adjx + skip, i + adjy)
-                adjx = 0
-                node += 1
 
     def connectswitch(self):
         #this is for randomizing switch
@@ -118,4 +135,8 @@ class Population:
         # initialize keyboard population
         self.population = [Keyboard(12, 10) for i in range(self.count)]
 
-x = Keyboard(18)
+keeb = Keyboard(18, 'keyboard-layout_1.json')
+print(keeb.keyboard)
+nx.draw(keeb.keyboard, pos=nx.get_node_attributes(keeb.keyboard, 'coord'))
+plt.show()
+
