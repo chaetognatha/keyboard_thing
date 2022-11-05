@@ -17,6 +17,9 @@ class Keyboard:
         self.keyboard = nx.Graph()
         self.json_file = json_file
         self.connect_list = []
+        self.fitness = 1
+        self.relative_fitness = 0
+        self.node_dict = {}
         with open(json_file, encoding="utf8") as f:
             self.json_dict = json.load(f)
             #print(type(self.json_dict))
@@ -27,7 +30,7 @@ class Keyboard:
             my_list = []
             full_list = []
             for i in self.json_dict:
-                print("This is a new row!")
+                #print("This is a new row!")
                 width = 0
                 skipx = 0
                 for j in i:
@@ -35,10 +38,24 @@ class Keyboard:
                     if isinstance(j, str):
                         #print(j.rstrip(), "is a str")
                         self.keyboard.add_node('SW' + str(node))
-                        self.keyboard.nodes['SW' + str(node)]['coord'] = (skipx+(width/2), adjy + skipy)
+                        self.keyboard.nodes['SW' + str(node)]['coord'] = (skipx+(width/2), float(adjy + skipy))
                         this_list = [node,
                                      self.keyboard.nodes['SW' + str(node)]['coord'][0],
                                      self.keyboard.nodes['SW' + str(node)]['coord'][1]]
+
+                        self.node_dict["node" + str(node)] = {
+                                'node' : this_list[0],
+                                'nodex': this_list[1],
+                                'nodey': this_list[2]
+                        }
+                        '''        
+                        adding dict
+                        self.node_dict['node0']['newkey'] = 6
+                        using dict
+                        print(self.node_dict['node0']['newkey'])
+                        '''
+
+                        #creating edges between nodes within the same row
                         if (node != 0 and
                                 self.keyboard.nodes['SW' + str(node-1)]['coord'][1] ==
                                 self.keyboard.nodes['SW' + str(node)]['coord'][1]):
@@ -56,17 +73,18 @@ class Keyboard:
                         my_list.append(this_list)
                         node += 1
 
+                    #checks modifier
                     elif isinstance(j, dict):
                         #print("This a dict with ", len(j), "items")
                         for key in j:
                             if key == 'x':
-                                print("add ", j['x'], " horizontal space")
+                                #print("add ", j['x'], " horizontal space")
                                 skipx += float(j['x'])
                             elif key == 'y':
-                                print("add ", j['y'], " vertical space")
+                                #print("add ", j['y'], " vertical space")
                                 skipy += float(j['y'])
                             elif key == 'w':
-                                print("add key width by ", j['w'])
+                                #print("add key width by ", j['w'])
                                 width = float(j['w'])-1
                             elif key == 'h':
                                 print("add key height(downwards) by ", j['h'])
@@ -76,11 +94,12 @@ class Keyboard:
                             elif key == 'a' or key == 'f' or key == 'f2' or key == 'p' or key == 's':
                                 print("something about font")
                 self.num_nodes = node
-                print(self.num_nodes)
+                #print(self.num_nodes)
                 skipy += 1
                 full_list.append(my_list.copy())
                 #clearing list to reuse
                 my_list.clear()
+        #creating edges from one node to nodes in the row below.
         for i in range(0, len(full_list)-1):
             #print("this is ", full_list[i])
             for j in range(0, len(full_list[i])):
@@ -101,11 +120,8 @@ class Keyboard:
                                                'SW' + str(int(full_list[i+1][k][0])),
                                                weight=theweight)
 
-
-        # Matrix where rows and cols depend on amount of pins. example 18 pins -> sqrt(18) = 9 -> 9 rows and 9 columns. for uneven amount of pins make columns>rows
-        # Note that these cols and rows are NOT defining the keeb cols and rows, this is specifically for the matrix and will always be as square as possible
-
-        if (pins / 2) % 1 == 0:
+        #creates matrix for pins
+        if (pins / 2) % 2 == 0:
             pincols = pins / 2
             pinrows = pins / 2
         else:
@@ -118,19 +134,15 @@ class Keyboard:
         self.matrix = int(pinrows * pincols)
         if self.matrix < node:
             print("Pins are too low, maximum matrix: ", self.matrix, " while keyboard requires atleast: ", node)
-        else:
-            print("Maximum matrix: ", self.matrix, "Matrix required: ", node)
 
         #creates a dict with every key and each key contains the matrix coordinates
         self.switch_dict = {}
-        self.switch_list = []
+
         self.switch_num = 0
         for mrow in range(1, self.pinrows+1):
             for mcol in range(1, self.pincols + 1):
                 self.switch_dict['key' + str(self.switch_num)] = mcol, mrow
-                this_switch = [self.switch_num, mcol, mrow]
                 self.switch_num += 1
-                self.switch_list.append(this_switch)
 
 
         #my_dict is used for drawing
@@ -138,30 +150,47 @@ class Keyboard:
         for i in full_list:
             for j in i:
                 self.my_dict['SW' + str(j[0])] = j[1],j[2]
-        '''
-                for count, switch in enumerate(self.switch_list):
-            print(count)
-        print(self.switch_list)
-        '''
 
-    def connectswitch(self):
+
 
         rand = np.random.choice(self.switch_num, size=self.num_nodes, replace=False)
-        #print(rand)
+        print(rand)
         self.list_of_nodes = []
+        self.list_of_unused = []
+        self.list_of_used = []
+        #This creates a list of node, switch pairs. [node, switch]
         for i in range(self.num_nodes):
             pair_list = [i, rand[i]]
+            self.list_of_used.append(rand[i])
             self.list_of_nodes.append(pair_list)
-        #list consist of list with format [node, switch]
+            self.node_dict['node' + str(i)]['switch'] = rand[i]
+        self.list_of_nodes = sorted(self.list_of_nodes, key=lambda x: x[1])
+        #print(self.list_of_nodes)
+        print(self.node_dict)
+        print(self.list_of_nodes)
+
+
+
+
+        #This creates a list with all unused switches for later usage
+        for i in range(self.switch_num):
+            if i not in self.list_of_used:
+                self.list_of_unused.append(i)
+        sorted(self.list_of_unused)
+        #print("list of used switches", self.list_of_used)
+        #print("list of unused switches", self.list_of_unused)
+        #print(self.list_of_nodes)
+
+    def for_other_parent(self):
+        return [self.list_of_nodes, self.list_of_unused]
 
         #we also need to be able to swap specific switches.
+    def rewireswitch(self, split):
+        print("beep boop, rewiring ", self.keyboard)
 
-    def rewireswitch(self):
-        self.these_switches = []
-        self.these_nodes = []
-        for slot in self.list_of_nodes:
-            self.these_nodes.append(slot[0])
-            self.these_switches.append(slot[1])
+    def calculate_fitness(self):
+        self.fitness = 1
+        #calculate new fitness
 
 
 
@@ -175,7 +204,80 @@ class Population:
 
         # initialize keyboard population
         self.population = [Keyboard(21, 'keyboard-layout_1.json') for i in range(self.count)]
-        print(self.population)
+        #print(self.population)
+
+    def copulate(self):
+        sum_fitness = 0
+        self.keeb_and_probability = []
+
+        #calculate sum of fitness
+        for keeeb in self.population:
+            keeeb.calculate_fitness()
+            sum_fitness += keeeb.fitness
+
+        #calculates relative fitness
+        for keeeb in self.population:
+            keeeb.relative_fitness = keeeb.fitness/sum_fitness
+            self.keeb_and_probability.append(keeeb.relative_fitness)
+
+        pairs = []
+        for i in range(int(self.count/2+0.5)):
+            pairs.append(np.random.choice(pop.population, size=2, replace=False, p=self.keeb_and_probability))
+        #print(pairs)
+
+        for this_pair in pairs:
+            #print("this is a pair ", this_pair)
+            #print(this_pair[0], this_pair[1])
+            split = np.random.randint(0, pop.population[0].matrix)
+            print("split here ",split)
+            parent1 = this_pair[0].for_other_parent()
+            parent2 = this_pair[1].for_other_parent()
+            #print(parent1[0][1])
+
+            split_here1 = 0
+            split_here2 = 0
+            for pair in parent1[0]:
+                if pair[1] < split:
+                    split_here1 += 1
+            for pair in parent2[0]:
+                if pair[1] < split:
+                    split_here2 += 1
+
+            parent1_kept = parent1[0][:split_here1]
+            parent2_kept = parent2[0][:split_here2]
+            parent1_given = parent1[0][split_here1:]
+            parent2_given = parent2[0][split_here2:]
+            print("parent 1 kept:", parent1_kept, "given", parent1_given)
+            print("parent 2 kept:", parent2_kept, "given", parent2_given)
+
+
+            #creates a list to match unused switches from parents where [parent1, parent2]
+
+            for unused1 in parent1[1]:
+                for unused2 in parent2[1]:
+                    if unused1 == unused2:
+                        parent1[1].remove(unused1)
+                        parent2[1].remove(unused1)
+
+
+            #checks for first step of merge conflict, if amount of nodes kept are different for the pairs
+
+            if len(parent1_kept) == len(parent2_kept):
+                print("no initial merge conflict")
+            elif len(parent1_kept) > len(parent2_kept):
+                print("parent1 has more switches kept")
+            elif len(parent1_kept) < len(parent2_kept):
+                print("parent2 has more switches kept")
+
+
+
+
+
+
+
+
+
+
 
 
         # RULES FOR GENERATING INDIVIDUALS
@@ -205,17 +307,19 @@ class Population:
 
 
 keebo = Keyboard(21, 'keyboard-layout_1.json')
-
+'''
 all_the_keebs = []
 for i in range(10):
     keeb = Keyboard(21, 'keyboard-layout_1.json')
-    keeb.connectswitch()
     all_the_keebs.append(keeb)
-
-
+'''
+pop = Population(10)
+#print(pop.population[0].list_of_nodes[0])
+pop.copulate()
+'''
 nx.draw(keebo.keyboard, node_size=50, font_size=10, pos=nx.get_node_attributes(keebo.keyboard, 'coord'), with_labels=True)
 labels = {}
-for u,v,data in keeb.keyboard.edges(data=True):
+for u,v,data in keebo.keyboard.edges(data=True):
     labels[(u,v)] = data['weight']
 nx.draw_networkx_edge_labels(keebo.keyboard,
                              pos=keebo.my_dict,
@@ -225,10 +329,10 @@ nx.draw_networkx_edge_labels(keebo.keyboard,
                              )
 plt.gca().invert_yaxis()
 plt.show()
+'''
 
-keebo.connectswitch()
-print(keebo.list_of_nodes)
-keebo.rewireswitch()
-print(keebo.these_nodes)
-print(keebo.these_switches)
+#print(keebo.list_of_nodes)
+#keebo.rewireswitch()
+#print(keebo.these_nodes)
+#print(keebo.these_switches)
 
