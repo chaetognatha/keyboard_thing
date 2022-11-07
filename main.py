@@ -16,7 +16,6 @@ class Keyboard:
     def __init__(self, pins, json_file):
         self.keyboard = nx.Graph()
         self.json_file = json_file
-        self.connect_list = []
         self.fitness = 1
         self.relative_fitness = 0
         self.node_dict = {}
@@ -265,9 +264,15 @@ class Population:
             if len(parent1_kept) == len(parent2_kept):
                 print("no initial merge conflict")
             elif len(parent1_kept) > len(parent2_kept):
-                print("parent1 has more switches kept")
+                #print("parent1 has more switches kept")
+                for i in range(len(parent1_kept) - len(parent2_kept)):
+                    parent2_kept.append(parent2_given.pop(i))
             elif len(parent1_kept) < len(parent2_kept):
-                print("parent2 has more switches kept")
+                #print("parent2 has more switches kept")
+                for i in range(len(parent2_kept) - len(parent1_kept)):
+                    parent1_kept.append(parent1_given.pop(i))
+
+            #Create copies of nodes and reapply them to the others genes.
 
 
 
