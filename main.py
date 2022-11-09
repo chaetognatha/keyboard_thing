@@ -86,12 +86,12 @@ class Keyboard:
                                 #print("add key width by ", j['w'])
                                 width = float(j['w'])-1
                             elif key == 'h':
-                                print("add key height(downwards) by ", j['h'])
+                                "add key height(downwards) by , j['h'])"
                                 #adjy += float(j['h']) / 2
                             elif key == 'x2' or key == 'y2' or key == 'w2' or key == 'h2':
-                                print("uh oh")
+                                "uh oh"
                             elif key == 'a' or key == 'f' or key == 'f2' or key == 'p' or key == 's':
-                                print("something about font")
+                                "something about font"
                 self.num_nodes = node
                 #print(self.num_nodes)
                 skipy += 1
@@ -134,14 +134,24 @@ class Keyboard:
         if self.matrix < node:
             print("Pins are too low, maximum matrix: ", self.matrix, " while keyboard requires atleast: ", node)
 
-        #creates a dict with every key and each key contains the matrix coordinates
-        self.switch_dict = {}
+        #each list in this list represents connected switches either through column or row.
+        self.switch_lines = []
+        switch_num = 0
+        for i in range(self.pinrows):
+            line_list = []
+            for j in range(self.pincols):
+                line_list.append(switch_num)
+                switch_num += 1
+            self.switch_lines.append(line_list)
+        for j in range(self.pincols):
+            line_list = []
+            for i in range(self.pinrows):
+                line_list.append(self.switch_lines[i][j])
+            self.switch_lines.append(line_list)
 
-        self.switch_num = 0
-        for mrow in range(1, self.pinrows+1):
-            for mcol in range(1, self.pincols + 1):
-                self.switch_dict['key' + str(self.switch_num)] = mcol, mrow
-                self.switch_num += 1
+
+
+
 
 
         #my_dict is used for drawing
@@ -152,8 +162,8 @@ class Keyboard:
 
 
 
-        rand = np.random.choice(self.switch_num, size=self.num_nodes, replace=False)
-        print(rand)
+        rand = np.random.choice(self.matrix, size=self.num_nodes, replace=False)
+        #print(rand)
         self.list_of_nodes = []
         self.list_of_unused = []
         self.list_of_used = []
@@ -165,14 +175,14 @@ class Keyboard:
             self.node_dict['node' + str(i)]['switch'] = rand[i]
         self.list_of_nodes = sorted(self.list_of_nodes, key=lambda x: x[1])
         #print(self.list_of_nodes)
-        print(self.node_dict)
-        print(self.list_of_nodes)
+        #print(self.node_dict)
+        #print(self.list_of_nodes)
 
 
 
 
         #This creates a list with all unused switches for later usage
-        for i in range(self.switch_num):
+        for i in range(self.matrix):
             if i not in self.list_of_used:
                 self.list_of_unused.append(i)
         sorted(self.list_of_unused)
@@ -188,8 +198,32 @@ class Keyboard:
         print("beep boop, rewiring ", self.keyboard)
 
     def calculate_fitness(self):
-        self.fitness = 1
-        #calculate new fitness
+        self.fitness = 0
+        node_list_copy = self.list_of_nodes
+        nodec, switchc = map(list, zip(*node_list_copy))
+        #print(node_list_copy)
+        #print(nodec, switchc)
+        for line in self.switch_lines:
+            node_line = []
+            for switch in line:
+                if switch in switchc:
+                    node_line.append(nodec[switchc.index(switch)])
+            line_list = []
+            for node in node_line:
+                node_coord = [
+                    self.node_dict['node' + str(node)]['node'],
+                    self.node_dict['node' + str(node)]['nodex'],
+                    self.node_dict['node' + str(node)]['nodey']
+                ]
+                line_list.append(node_coord)
+            line_list = sorted(line_list, key=lambda x: x[1])
+            for node in range(len(line_list)-1):
+                self.fitness += line_list[node+1][1]-line_list[node][1] + \
+                                abs(line_list[node+1][1]-line_list[node][1])
+        self.fitness = 1/(1 + self.fitness)
+        print("fitness:", self.fitness)
+
+
 
 
 
@@ -218,6 +252,7 @@ class Population:
         for keeeb in self.population:
             keeeb.relative_fitness = keeeb.fitness/sum_fitness
             self.keeb_and_probability.append(keeeb.relative_fitness)
+        print(self.keeb_and_probability)
 
         pairs = []
         for i in range(int(self.count/2+0.5)):
@@ -225,10 +260,12 @@ class Population:
         #print(pairs)
 
         for this_pair in pairs:
-            #print("this is a pair ", this_pair)
-            #print(this_pair[0], this_pair[1])
+            '''print("this is a pair ", this_pair)
+            print("this is first parent ", this_pair[0].node_dict)
+            print("this is second parent ", this_pair[1].node_dict)
+            '''
             split = np.random.randint(0, pop.population[0].matrix)
-            print("split here ",split)
+            #print("split here ",split)
             parent1 = this_pair[0].for_other_parent()
             parent2 = this_pair[1].for_other_parent()
             #print(parent1[0][1])
@@ -242,47 +279,82 @@ class Population:
                 if pair[1] < split:
                     split_here2 += 1
 
-            parent1_kept = parent1[0][:split_here1]
-            parent2_kept = parent2[0][:split_here2]
-            parent1_given = parent1[0][split_here1:]
-            parent2_given = parent2[0][split_here2:]
-            print("parent 1 kept:", parent1_kept, "given", parent1_given)
-            print("parent 2 kept:", parent2_kept, "given", parent2_given)
+            flip_kept_given = np.random.randint(2)
+            if flip_kept_given == 0:
+                parent1_kept = parent1[0][:split_here1]
+                parent2_kept = parent2[0][:split_here2]
+                parent1_given = parent1[0][split_here1:]
+                parent2_given = parent2[0][split_here2:]
+            else:
+                parent1_kept = parent1[0][split_here1:]
+                parent2_kept = parent2[0][split_here2:]
+                parent1_given = parent1[0][:split_here1]
+                parent2_given = parent2[0][:split_here2]
+                #print("flipped")
+
+            #print("parent 1 kept:", parent1_kept, "given", parent1_given)
+            #print("parent 2 kept:", parent2_kept, "given", parent2_given)
 
 
             #creates a list to match unused switches from parents where [parent1, parent2]
-
+            parent1_removed = []
+            parent2_removed = []
             for unused1 in parent1[1]:
                 for unused2 in parent2[1]:
                     if unused1 == unused2:
-                        parent1[1].remove(unused1)
-                        parent2[1].remove(unused1)
+                        parent1_removed.append(parent1[1].pop(parent1[1].index(unused1)))
+                        parent2_removed.append(parent2[1].pop(parent2[1].index(unused1)))
+                        #parent1[1].remove(unused1)
+                        #parent2[1].remove(unused1)
 
 
             #checks for first step of merge conflict, if amount of nodes kept are different for the pairs
-
+            '''
             if len(parent1_kept) == len(parent2_kept):
                 print("no initial merge conflict")
-            elif len(parent1_kept) > len(parent2_kept):
-                #print("parent1 has more switches kept")
-                for i in range(len(parent1_kept) - len(parent2_kept)):
-                    parent2_kept.append(parent2_given.pop(i))
-            elif len(parent1_kept) < len(parent2_kept):
-                #print("parent2 has more switches kept")
-                for i in range(len(parent2_kept) - len(parent1_kept)):
-                    parent1_kept.append(parent1_given.pop(i))
+            '''
+            if len(parent1_kept) != len(parent2_kept):
+                while len(parent1_kept) > len(parent2_kept):
+                    #print(len(parent2_kept), len(parent1_kept), parent2_given[0], parent2_given)
+                    parent2_kept.append(parent2_given.pop(0))
+                while len(parent1_kept) < len(parent2_kept):
+                    #print(len(parent2_kept), len(parent1_kept), parent1_given[0], parent1_given)
+                    parent1_kept.append(parent1_given.pop(0))
 
             #Create copies of nodes and reapply them to the others genes.
+            parent1_given = sorted(parent1_given, key=lambda x: x[0])
+            parent2_given = sorted(parent2_given, key=lambda x: x[0])
+            #loop to extract the nodes from switches and then swapping them.
+            parent1_node = []
+            parent1_switch = []
+            parent2_node = []
+            parent2_switch = []
+            for pairs in parent1_given:
+                parent1_node.append(pairs[0])
+                parent1_switch.append(pairs[1])
+            for pairs in parent2_given:
+                parent2_node.append(pairs[0])
+                parent2_switch.append(pairs[1])
 
+            parent1_given.clear()
+            parent2_given.clear()
+            for i in range(len(parent1_node)):
+                pair = [parent1_node[i], parent2_switch[i]]
+                parent1_kept.append(pair)
+                pair = [parent2_node[i], parent1_switch[i]]
+                parent2_kept.append(pair)
+            this_pair[0].list_of_nodes = parent1_kept
+            this_pair[1].list_of_nodes = parent2_kept
 
-
-
-
-
-
-
-
-
+            for i in range(len(parent1_kept)):
+                this_pair[0].node_dict['node' + str(parent1_kept[i][0])]['switch'] = parent1_kept[i][1]
+                this_pair[1].node_dict['node' + str(parent2_kept[i][0])]['switch'] = parent2_kept[i][1]
+            #print(this_pair[0].list_of_unused)
+            this_pair[0].list_of_unused = this_pair[0].list_of_unused + parent1_removed
+            this_pair[1].list_of_unused = this_pair[1].list_of_unused + parent2_removed
+            #print(this_pair[0].list_of_unused)
+            #print("this is first child ", this_pair[0].node_dict)
+            #print("this is second child ", this_pair[1].node_dict)
 
 
         # RULES FOR GENERATING INDIVIDUALS
@@ -318,9 +390,10 @@ for i in range(10):
     keeb = Keyboard(21, 'keyboard-layout_1.json')
     all_the_keebs.append(keeb)
 '''
-pop = Population(10)
+pop = Population(6)
 #print(pop.population[0].list_of_nodes[0])
-pop.copulate()
+for i in range(100):
+    pop.copulate()
 '''
 nx.draw(keebo.keyboard, node_size=50, font_size=10, pos=nx.get_node_attributes(keebo.keyboard, 'coord'), with_labels=True)
 labels = {}
@@ -334,10 +407,7 @@ nx.draw_networkx_edge_labels(keebo.keyboard,
                              )
 plt.gca().invert_yaxis()
 plt.show()
+
+
+print(keebo.list_of_nodes)
 '''
-
-#print(keebo.list_of_nodes)
-#keebo.rewireswitch()
-#print(keebo.these_nodes)
-#print(keebo.these_switches)
-
