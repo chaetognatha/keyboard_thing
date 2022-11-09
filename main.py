@@ -16,8 +16,9 @@ class Keyboard:
     def __init__(self, pins, json_file):
         self.keyboard = nx.Graph()
         self.json_file = json_file
-        self.fitness = 1
-        self.relative_fitness = 0
+        self.fitness = float(1)
+        self.relative_fitness = float(0)
+        self.processed_fitness = float(0)
         self.node_dict = {}
         with open(json_file, encoding="utf8") as f:
             self.json_dict = json.load(f)
@@ -220,8 +221,7 @@ class Keyboard:
             for node in range(len(line_list)-1):
                 self.fitness += line_list[node+1][1]-line_list[node][1] + \
                                 abs(line_list[node+1][1]-line_list[node][1])
-        self.fitness = 1/(1 + self.fitness)
-        print("fitness:", self.fitness)
+        print(self.processed_fitness, self.fitness)
 
 
 
@@ -234,25 +234,37 @@ class Population:
     def __init__(self, count):
         # size of population
         self.count = count
-
+        self.gen_fitness = float(0)
         # initialize keyboard population
         self.population = [Keyboard(21, 'keyboard-layout_1.json') for i in range(self.count)]
         #print(self.population)
 
     def copulate(self):
-        sum_fitness = 0
+        sum_fitness = float(0)
         self.keeb_and_probability = []
 
         #calculate sum of fitness
         for keeeb in self.population:
             keeeb.calculate_fitness()
             sum_fitness += keeeb.fitness
-
+        average_fitness = self.gen_fitness
+        processed_sum_fitness = float(0)
+        for keeeb in self.population:
+            if average_fitness == 0:
+                keeeb.processed_fitness = 1
+                print("average was 0")
+            else:
+                keeeb.processed_fitness = (average_fitness/keeeb.fitness)**2
+                print("average was not 0")
+            processed_sum_fitness += keeeb.processed_fitness
+            print("this is processed_fitness",keeeb.processed_fitness)
+        print("this is processed sum", processed_sum_fitness)
+        self.gen_fitness = processed_sum_fitness/self.count
         #calculates relative fitness
         for keeeb in self.population:
-            keeeb.relative_fitness = keeeb.fitness/sum_fitness
+            keeeb.relative_fitness = keeeb.processed_fitness/processed_sum_fitness
             self.keeb_and_probability.append(keeeb.relative_fitness)
-        print(self.keeb_and_probability)
+        #print(self.keeb_and_probability)
 
         pairs = []
         for i in range(int(self.count/2+0.5)):
@@ -390,8 +402,7 @@ for i in range(10):
     keeb = Keyboard(21, 'keyboard-layout_1.json')
     all_the_keebs.append(keeb)
 '''
-pop = Population(6)
-#print(pop.population[0].list_of_nodes[0])
+pop = Population(10)
 for i in range(100):
     pop.copulate()
 '''
