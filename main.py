@@ -16,6 +16,7 @@ class Keyboard:
     def __init__(self, pins, json_file):
         self.keyboard = nx.Graph()
         self.json_file = json_file
+        self.length = float(0)
         self.fitness = float(1)
         self.relative_fitness = float(0)
         self.processed_fitness = float(0)
@@ -194,12 +195,17 @@ class Keyboard:
     def for_other_parent(self):
         return [self.list_of_nodes, self.list_of_unused]
 
-        #we also need to be able to swap specific switches.
-    def rewireswitch(self, split):
-        print("beep boop, rewiring ", self.keyboard)
+
+    def rewireswitch(self):
+        self.list_of_nodes.clear()
+        for node in self.node_dict:
+            node_switch = [self.node_dict[node]['node'], self.node_dict[node]['switch']]
+            self.list_of_nodes.append(node_switch)
+        self.list_of_nodes = sorted(self.list_of_nodes, key=lambda x: x[1])
+
 
     def calculate_fitness(self):
-        self.fitness = 0
+        self.length = 0
         node_list_copy = self.list_of_nodes
         nodec, switchc = map(list, zip(*node_list_copy))
         #print(node_list_copy)
@@ -219,9 +225,8 @@ class Keyboard:
                 line_list.append(node_coord)
             line_list = sorted(line_list, key=lambda x: x[1])
             for node in range(len(line_list)-1):
-                self.fitness += line_list[node+1][1]-line_list[node][1] + \
-                                abs(line_list[node+1][1]-line_list[node][1])
-        print(self.processed_fitness, self.fitness)
+                self.length += abs(line_list[node+1][1]-line_list[node][1]) + \
+                               abs(line_list[node+1][2]-line_list[node][2])
 
 
 
@@ -242,32 +247,27 @@ class Population:
     def copulate(self):
         sum_fitness = float(0)
         self.keeb_and_probability = []
-
-        #calculate sum of fitness
+        for i in range(self.count):
+            self.keeb_and_probability.append(0)
+        number = 0
+        ranking = []
         for keeeb in self.population:
             keeeb.calculate_fitness()
-            sum_fitness += keeeb.fitness
-        average_fitness = self.gen_fitness
-        processed_sum_fitness = float(0)
-        for keeeb in self.population:
-            if average_fitness == 0:
-                keeeb.processed_fitness = 1
-                print("average was 0")
-            else:
-                keeeb.processed_fitness = (average_fitness/keeeb.fitness)**2
-                print("average was not 0")
-            processed_sum_fitness += keeeb.processed_fitness
-            print("this is processed_fitness",keeeb.processed_fitness)
-        print("this is processed sum", processed_sum_fitness)
-        self.gen_fitness = processed_sum_fitness/self.count
-        #calculates relative fitness
-        for keeeb in self.population:
-            keeeb.relative_fitness = keeeb.processed_fitness/processed_sum_fitness
-            self.keeb_and_probability.append(keeeb.relative_fitness)
-        #print(self.keeb_and_probability)
+            ranking.append([number, keeeb.length])
+            number += 1
+        ranking = sorted(ranking, key=lambda x: -x[1])
+        print("this is ranking", ranking)
+
+        k = 0.2/(self.count-1)
+        is_this_one = 0
+        for rank in ranking:
+            self.keeb_and_probability[rank[0]] = k*(ranking.index(rank))
+            is_this_one += k*(ranking.index(rank))
+
 
         pairs = []
         for i in range(int(self.count/2+0.5)):
+            #last condition is the probability "p=self.keeb_and_probability"
             pairs.append(np.random.choice(pop.population, size=2, replace=False, p=self.keeb_and_probability))
         #print(pairs)
 
@@ -364,6 +364,8 @@ class Population:
             #print(this_pair[0].list_of_unused)
             this_pair[0].list_of_unused = this_pair[0].list_of_unused + parent1_removed
             this_pair[1].list_of_unused = this_pair[1].list_of_unused + parent2_removed
+            this_pair[0].rewireswitch()
+            this_pair[1].rewireswitch()
             #print(this_pair[0].list_of_unused)
             #print("this is first child ", this_pair[0].node_dict)
             #print("this is second child ", this_pair[1].node_dict)
@@ -395,7 +397,7 @@ class Population:
 
 
 
-keebo = Keyboard(21, 'keyboard-layout_1.json')
+#keebo = Keyboard(21, 'keyboard-layout_1.json')
 '''
 all_the_keebs = []
 for i in range(10):
@@ -403,7 +405,7 @@ for i in range(10):
     all_the_keebs.append(keeb)
 '''
 pop = Population(10)
-for i in range(100):
+for i in range(10000):
     pop.copulate()
 '''
 nx.draw(keebo.keyboard, node_size=50, font_size=10, pos=nx.get_node_attributes(keebo.keyboard, 'coord'), with_labels=True)
