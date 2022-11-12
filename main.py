@@ -188,6 +188,7 @@ class Keyboard:
             if i not in self.list_of_used:
                 self.list_of_unused.append(i)
         sorted(self.list_of_unused)
+        #print("length of list of unused", len(self.list_of_unused)) answer: 5
         #print("list of used switches", self.list_of_used)
         #print("list of unused switches", self.list_of_unused)
         #print(self.list_of_nodes)
@@ -202,7 +203,16 @@ class Keyboard:
             node_switch = [self.node_dict[node]['node'], self.node_dict[node]['switch']]
             self.list_of_nodes.append(node_switch)
         self.list_of_nodes = sorted(self.list_of_nodes, key=lambda x: x[1])
+        full_matrix= list(range(0, self.matrix))
+        for node in self.list_of_nodes:
+            try:
+                full_matrix.pop(full_matrix.index(node[1]))
 
+            except ValueError:
+                pass
+        self.list_of_unused = full_matrix
+        if len(self.list_of_unused) > 5:
+            print("list of unused", len(self.list_of_unused), self.list_of_nodes)
 
     def calculate_fitness(self):
         self.length = 0
@@ -239,10 +249,14 @@ class Population:
     def __init__(self, count):
         # size of population
         self.count = count
+        self.best = 100000
+        self.top_keeb = []
         self.gen_fitness = float(0)
         # initialize keyboard population
         self.population = [Keyboard(21, 'keyboard-layout_1.json') for i in range(self.count)]
         #print(self.population)
+
+
 
     def copulate(self):
         sum_fitness = float(0)
@@ -254,21 +268,41 @@ class Population:
         for keeeb in self.population:
             keeeb.calculate_fitness()
             ranking.append([number, keeeb.length])
+            if keeeb.length < self.best:
+                print("new best")
+                best_nodes_list = ["length " + str(keeeb.length), keeeb.list_of_nodes]
+                self.top_keeb.append(best_nodes_list)
+                while len(self.top_keeb) > 3:
+                    self.top_keeb.pop(0)
+                    print(self.top_keeb[0])
+                    print(self.top_keeb[1])
+                    print(self.top_keeb[2])
+                    self.best = self.top_keeb[3]
             number += 1
         ranking = sorted(ranking, key=lambda x: -x[1])
-        print("this is ranking", ranking)
 
-        k = 0.2/(self.count-1)
-        is_this_one = 0
+        if ranking[-1][1] < self.best:
+            self.best = ranking[-1][1]
+        #print("best:", self.best, "this is ranking", sorted(ranking, key=lambda x: x[1]))
+
+
+        #linear rank probability
+        k = 2/(self.count**2)
+        sum_prob = 0
         for rank in ranking:
-            self.keeb_and_probability[rank[0]] = k*(ranking.index(rank))
-            is_this_one += k*(ranking.index(rank))
+            self.keeb_and_probability[rank[0]] = (k*(ranking.index(rank)))
+            sum_prob += (k*(ranking.index(rank)))
 
+        probs = np.array(self.keeb_and_probability)
+        probs /= probs.sum()
+
+
+        #grab dict of highest fitness and replace lowest fitness in next generation.
 
         pairs = []
         for i in range(int(self.count/2+0.5)):
             #last condition is the probability "p=self.keeb_and_probability"
-            pairs.append(np.random.choice(pop.population, size=2, replace=False, p=self.keeb_and_probability))
+            pairs.append(np.random.choice(pop.population, size=2, replace=False, p=probs))
         #print(pairs)
 
         for this_pair in pairs:
@@ -291,7 +325,9 @@ class Population:
                 if pair[1] < split:
                     split_here2 += 1
 
-            flip_kept_given = np.random.randint(2)
+            #the flip part is broken. needs fixing.
+            #flip_kept_given = np.random.randint(2)
+            flip_kept_given = 0
             if flip_kept_given == 0:
                 parent1_kept = parent1[0][:split_here1]
                 parent2_kept = parent2[0][:split_here2]
@@ -307,7 +343,7 @@ class Population:
             #print("parent 1 kept:", parent1_kept, "given", parent1_given)
             #print("parent 2 kept:", parent2_kept, "given", parent2_given)
 
-
+            ''' pretty sure this section doesnt matter.
             #creates a list to match unused switches from parents where [parent1, parent2]
             parent1_removed = []
             parent2_removed = []
@@ -318,20 +354,25 @@ class Population:
                         parent2_removed.append(parent2[1].pop(parent2[1].index(unused1)))
                         #parent1[1].remove(unused1)
                         #parent2[1].remove(unused1)
-
+            '''
 
             #checks for first step of merge conflict, if amount of nodes kept are different for the pairs
-            '''
-            if len(parent1_kept) == len(parent2_kept):
-                print("no initial merge conflict")
-            '''
             if len(parent1_kept) != len(parent2_kept):
                 while len(parent1_kept) > len(parent2_kept):
                     #print(len(parent2_kept), len(parent1_kept), parent2_given[0], parent2_given)
-                    parent2_kept.append(parent2_given.pop(0))
+                    #print("this is parent2 given:", parent2_given)
+                    replace_node = parent2_given.pop(0)
+                    #print("this is replace_node", replace_node)
+                    replace_node[1] = parent2[1].pop(0)
+                    #print("this is replace_node after fix", replace_node)
+                    #print("this is parent2_kept before", parent2_kept)
+                    parent2_kept.append(replace_node)
+                    #print("this is parent2_kept after", parent2_kept)
                 while len(parent1_kept) < len(parent2_kept):
                     #print(len(parent2_kept), len(parent1_kept), parent1_given[0], parent1_given)
-                    parent1_kept.append(parent1_given.pop(0))
+                    replace_node = parent1_given.pop(0)
+                    replace_node[1] = parent1[1].pop(0)
+                    parent1_kept.append(replace_node)
 
             #Create copies of nodes and reapply them to the others genes.
             parent1_given = sorted(parent1_given, key=lambda x: x[0])
@@ -362,8 +403,6 @@ class Population:
                 this_pair[0].node_dict['node' + str(parent1_kept[i][0])]['switch'] = parent1_kept[i][1]
                 this_pair[1].node_dict['node' + str(parent2_kept[i][0])]['switch'] = parent2_kept[i][1]
             #print(this_pair[0].list_of_unused)
-            this_pair[0].list_of_unused = this_pair[0].list_of_unused + parent1_removed
-            this_pair[1].list_of_unused = this_pair[1].list_of_unused + parent2_removed
             this_pair[0].rewireswitch()
             this_pair[1].rewireswitch()
             #print(this_pair[0].list_of_unused)
@@ -404,8 +443,8 @@ for i in range(10):
     keeb = Keyboard(21, 'keyboard-layout_1.json')
     all_the_keebs.append(keeb)
 '''
-pop = Population(10)
-for i in range(10000):
+pop = Population(1000)
+for i in range(1000000):
     pop.copulate()
 '''
 nx.draw(keebo.keyboard, node_size=50, font_size=10, pos=nx.get_node_attributes(keebo.keyboard, 'coord'), with_labels=True)
