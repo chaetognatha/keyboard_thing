@@ -270,14 +270,14 @@ class Population:
             ranking.append([number, keeeb.length])
             if keeeb.length < self.best:
                 print("new best")
-                best_nodes_list = ["length " + str(keeeb.length), keeeb.list_of_nodes]
+                best_nodes_list = ["length", keeeb.length, keeeb.list_of_nodes]
                 self.top_keeb.append(best_nodes_list)
                 while len(self.top_keeb) > 3:
                     self.top_keeb.pop(0)
                     print(self.top_keeb[0])
                     print(self.top_keeb[1])
                     print(self.top_keeb[2])
-                    self.best = self.top_keeb[3]
+                    self.best = self.top_keeb[2][1]
             number += 1
         ranking = sorted(ranking, key=lambda x: -x[1])
 
